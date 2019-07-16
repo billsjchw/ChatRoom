@@ -9,42 +9,61 @@ const BUFSIZE = 1024
 const TIMEOUT = 10 * time.Second
 
 const (
-	USER_SEND_MSG = byte(0x00)
+	USER_SET_NAME = byte(0x00)
+	USER_SEND_MSG = byte(0x01)
 )
 
 const (
 	SERV_BCST_MSG = byte(0x00)
-	SERV_USER_NAM = byte(0x01)
+	SERV_DUP_NAME = byte(0x01)
+	SERV_NEW_USER = byte(0x02)
+	SERV_PROP_NAM = byte(0x03)
 )
 
 type Data struct {
-	code    byte
-	args    uint
-	size    []uint
-	content [][]byte
+	Code    byte
+	Args    uint
+	Size    []uint
+	Content [][]byte
 }
 
-func rcvData(client net.Conn) (*Data, error) {
+func NewData(code byte, content ...[]byte) *Data {
+	data := new(Data)
+	data.Code = code
+	data.Args = uint(len(content))
+	data.Size = make([]uint, data.Args)
+	for i := uint(0); i < data.Args; i++ {
+		data.Size[i] = uint(len(content[i]))
+	}
+	data.Content = content
+	return data
+}
+
+func RcvData(client net.Conn) (*Data, error) {
 	data := new(Data)
 	raw, err := readByte(client, 1)
 	if err != nil {
 		return nil, err
 	}
-	data.code = raw[0]
+	data.Code = raw[0]
 	raw, err = readByte(client, 4)
 	if err != nil {
 		return nil, err
 	}
-	data.args = byteStreamToInt(raw)
-	for i := uint(0); i < data.args; i++ {
+	data.Args = byteStreamToInt(raw)
+	// PrintClientMsg("receive data from " + client.RemoteAddr().String() + ", Code=" +
+	// 	strconv.Itoa(int(data.Code)) + ", Args=" + strconv.Itoa(int(data.Args)))
+	data.Size = make([]uint, data.Args)
+	for i := uint(0); i < data.Args; i++ {
 		raw, err = readByte(client, 4)
 		if err != nil {
 			return nil, err
 		}
-		data.size[i] = byteStreamToInt(raw)
+		data.Size[i] = byteStreamToInt(raw)
 	}
-	for i := uint(0); i < data.args; i++ {
-		data.content[i], err = readByte(client, data.size[i])
+	data.Content = make([][]byte, data.Args)
+	for i := uint(0); i < data.Args; i++ {
+		data.Content[i], err = readByte(client, data.Size[i])
 		if err != nil {
 			return nil, err
 		}
@@ -52,34 +71,34 @@ func rcvData(client net.Conn) (*Data, error) {
 	return data, nil
 }
 
-func sendData(client net.Conn, data *Data) error {
+func SendData(client net.Conn, data *Data) error {
 	var raw []byte
-	raw = append(raw, data.code)
-	raw = append(raw, intToByteStream(data.args)...)
-	for i := uint(0); i < data.args; i++ {
-		raw = append(raw, intToByteStream(data.size[i])...)
+	raw = append(raw, data.Code)
+	raw = append(raw, intToByteStream(data.Args)...)
+	for i := uint(0); i < data.Args; i++ {
+		raw = append(raw, intToByteStream(data.Size[i])...)
 	}
-	for i := uint(0); i < data.args; i++ {
-		raw = append(raw, data.content[i]...)
+	for i := uint(0); i < data.Args; i++ {
+		raw = append(raw, data.Content[i]...)
 	}
 	client.Write(raw)
 	return nil
 }
 
-func readByte(client net.Conn, size uint) ([]byte, error) {
+func readByte(client net.Conn, Size uint) ([]byte, error) {
 	var buffer []byte
 	var raw []byte
-	for size > 0 {
-		if size > BUFSIZE {
+	for Size > 0 {
+		if Size > BUFSIZE {
 			buffer = make([]byte, BUFSIZE)
 		} else {
-			buffer = make([]byte, size)
+			buffer = make([]byte, Size)
 		}
 		readSize, err := client.Read(buffer)
 		if err != nil {
 			return nil, err
 		}
-		size -= uint(readSize)
+		Size -= uint(readSize)
 		raw = append(raw, buffer...)
 	}
 	return raw, nil
