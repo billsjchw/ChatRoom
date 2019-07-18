@@ -1,185 +1,181 @@
 package chatroom
 
 import (
+	"database/sql"
+	"encoding/json"
 	"net"
 	"strconv"
-	"sync"
 )
 
-type User struct {
-	conn net.Conn
-	name string
-}
-
 type ChatServer struct {
-	listenAddr string
-	listener   net.Listener
-	userlist   map[int]*User
-	userCnt    int
-	namelist   map[string]bool
-	mux        sync.Mutex
+	addr      string
+	db        *sql.DB
+	broadcast chan *Packet
+	login     chan *LogRequest
+	regist    chan *LogRequest
+	leave     chan string
 }
 
-func NewChatServer(addr string, port int) *ChatServer {
+type SysMsg struct {
+	Content string `json:"content,omitempty"`
+}
+
+type LogRequest struct {
+	user  *User
+	ret   chan byte
+	input chan *Packet
+}
+
+func NewChatServer(addr string, port int, dbName string) *ChatServer {
 	server := new(ChatServer)
-	server.listenAddr = addr + ":" + strconv.Itoa(port)
-	server.userlist = make(map[int]*User)
-	server.namelist = make(map[string]bool)
+	server.addr = addr + ":" + strconv.Itoa(port)
+	server.db = openDatabase(dbName)
+	server.broadcast = make(chan *Packet)
+	server.login = make(chan *LogRequest)
+	server.regist = make(chan *LogRequest)
+	server.leave = make(chan string)
 	return server
 }
 
-func (server *ChatServer) StartListen() {
-	listener, err := net.Listen("tcp", server.listenAddr)
-	server.listener = listener
+func (server *ChatServer) Start() {
+	listener, err := net.Listen("tcp", server.addr)
 	if err != nil {
 		PrintErr(err.Error())
 		return
 	} else {
-		PrintLog("start listening " + server.listenAddr)
+		PrintLog("start listening " + server.addr)
 	}
+	go server.handlePublic()
 	for {
-		client, err := server.listener.Accept()
+		client, err := listener.Accept()
 		if err != nil {
 			PrintErr(err.Error())
 			return
 		} else {
-			userID := server.newUser(client)
-			go server.handle(userID)
+			PrintClientMsg("receive connection from " + client.RemoteAddr().String())
+			go server.handleClient(client)
 		}
 	}
 }
 
-func (server *ChatServer) handle(userID int) {
-	server.mux.Lock()
-	user := server.userlist[userID]
-	server.mux.Unlock()
-	client := user.conn
-	defer func() {
-		PrintClientMsg(client.RemoteAddr().String() + " exits")
-		server.mux.Lock()
-		delete(server.namelist, user.name)
-		delete(server.userlist, userID)
-		server.mux.Unlock()
-		client.Close()
-	}()
-	err := server.askForName(userID)
-	if err != nil {
-		return
-	}
+func (server *ChatServer) handlePublic() {
+	online := make(map[string]chan *Packet)
 	for {
-		data, err := RcvData(client)
+		select {
+		case packet := <-server.broadcast:
+			for _, input := range online {
+				input <- packet
+			}
+		case req := <-server.login:
+			if _, flag := online[req.user.Username]; flag {
+				req.ret <- DUPLICATE_LOGIN
+				break
+			}
+			code := server.checkLogin(req.user.Username, req.user.Password)
+			if code == SUCCESS {
+				online[req.user.Username] = req.input
+			}
+			req.ret <- code
+		case req := <-server.regist:
+			code := server.handleRegist(req.user)
+			if code == SUCCESS {
+				online[req.user.Username] = req.input
+			}
+			req.ret <- code
+		case username := <-server.leave:
+			close(online[username])
+			delete(online, username)
+		}
+	}
+}
+
+func (server *ChatServer) handleClient(client net.Conn) {
+	input := make(chan *Packet)
+	defer func() {
+		client.Close()
+		PrintClientMsg("connection " + client.RemoteAddr().String() + " closes")
+	}()
+	var user *User
+	code := NULL
+	for code != SUCCESS {
+		packet, err := RcvPacket(client)
 		if err != nil {
 			return
 		}
-		switch data.Code {
-		case USER_SEND_MSG:
-			PrintClientMsg("receive msg from " + client.RemoteAddr().String() + ", Content=\"" +
-				string(data.Content[0]) + "\"")
-			server.broadcast(userID, data)
+		user = newUser(packet.Content)
+		ret := make(chan byte)
+		switch packet.Code {
+		case LOGIN:
+			server.login <- newLogRequest(user, ret, input)
+			code = <-ret
+		case REGIST:
+			server.regist <- newLogRequest(user, ret, input)
+			code = <-ret
 		}
-	}
-}
-
-func (server *ChatServer) newUser(client net.Conn) int {
-	user := new(User)
-	user.conn = client
-	server.mux.Lock()
-	server.userCnt++
-	userID := server.userCnt
-	server.userlist[userID] = user
-	server.mux.Unlock()
-	PrintClientMsg("receive connection from " + client.RemoteAddr().String())
-	return userID
-}
-
-func (server *ChatServer) broadcast(userID int, data *Data) {
-	var clientList []net.Conn
-	server.mux.Lock()
-	for k, user := range server.userlist {
-		if k == userID {
-			continue
-		}
-		clientList = append(clientList, user.conn)
-	}
-	user := server.userlist[userID]
-	name := user.name
-	server.mux.Unlock()
-	content := data.Content
-	content = append(content, []byte(name))
-	bcst_data := NewData(SERV_BCST_MSG, content...)
-	var wg sync.WaitGroup
-	for _, client := range clientList {
-		wg.Add(1)
-		go func(client net.Conn) {
-			SendData(client, bcst_data)
-			wg.Done()
-		}(client)
-	}
-	wg.Wait()
-}
-
-func (server *ChatServer) askForName(userID int) error {
-	server.mux.Lock()
-	user := server.userlist[userID]
-	server.mux.Unlock()
-	client := user.conn
-	for {
-		data, err := RcvData(client)
+		err = SendPacket(client, NewPacket(code, nil))
 		if err != nil {
-			return err
+			return
 		}
-		name := string(data.Content[0])
-		server.mux.Lock()
-		duplicate := server.namelist[name]
-		server.namelist[name] = true
-		server.mux.Unlock()
-		if duplicate {
-			server.notifyDupName(userID)
-		} else {
-			server.mux.Lock()
-			user.name = name
-			server.mux.Unlock()
-			server.notifyPropName(userID)
-			server.notifyNewUser(userID)
+	}
+	content, _ := json.Marshal(newSysMsg("User " + user.Username + " enters the chat room."))
+	server.broadcast <- NewPacket(SYSTEM_MESSAGE, content)
+	go writeClient(client, input)
+	for {
+		packet, err := RcvPacket(client)
+		if err != nil {
+			server.leave <- user.Username
+			content, _ := json.Marshal(newSysMsg("User " + user.Username + " leaves the chat room."))
+			server.broadcast <- NewPacket(SYSTEM_MESSAGE, content)
+			return
+		}
+		switch packet.Code {
+		case MESSAGE:
+			server.broadcast <- NewPacket(USER_MESSAGE, packet.Content)
+		}
+	}
+}
+
+func writeClient(client net.Conn, input chan *Packet) {
+	for packet := range input {
+		err := SendPacket(client, packet)
+		if err != nil {
+			client.Close()
 			break
 		}
 	}
-	return nil
-}
-
-func (server *ChatServer) notifyDupName(userID int) {
-	server.mux.Lock()
-	client := server.userlist[userID].conn
-	server.mux.Unlock()
-	data := NewData(SERV_DUP_NAME)
-	SendData(client, data)
-}
-
-func (server *ChatServer) notifyNewUser(userID int) {
-	var clientList []net.Conn
-	server.mux.Lock()
-	for _, user := range server.userlist {
-		clientList = append(clientList, user.conn)
+	for range input {
 	}
-	user := server.userlist[userID]
-	name := user.name
-	server.mux.Unlock()
-	data := NewData(SERV_NEW_USER, []byte(name))
-	var wg sync.WaitGroup
-	for _, client := range clientList {
-		wg.Add(1)
-		go func(client net.Conn) {
-			SendData(client, data)
-			wg.Done()
-		}(client)
-	}
-	wg.Wait()
 }
 
-func (server *ChatServer) notifyPropName(userID int) {
-	server.mux.Lock()
-	client := server.userlist[userID].conn
-	server.mux.Unlock()
-	data := NewData(SERV_PROP_NAM)
-	SendData(client, data)
+func (server *ChatServer) checkLogin(username string, password string) byte {
+	right, exist := query(server.db, username, "password")
+	if !exist {
+		return WRONG_USERNAME
+	}
+	if password != right {
+		return WRONG_PASSWORD
+	}
+	return SUCCESS
+}
+
+func (server *ChatServer) handleRegist(user *User) byte {
+	exist := insert(server.db, user)
+	if exist {
+		return DUPLICATE_USERNAME
+	}
+	return SUCCESS
+}
+
+func newSysMsg(content string) *SysMsg {
+	msg := new(SysMsg)
+	msg.Content = content
+	return msg
+}
+
+func newLogRequest(user *User, ret chan byte, input chan *Packet) *LogRequest {
+	req := new(LogRequest)
+	req.user = user
+	req.ret = ret
+	req.input = input
+	return req
 }
