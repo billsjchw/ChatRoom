@@ -5,24 +5,24 @@ import (
 	"net"
 )
 
-const NULL = byte(0)
-
-// Request Code
 const (
-	LOGIN = byte(iota) + byte(1)
-	REGIST
-	MESSAGE
-)
-
-// Response Code
-const (
-	SUCCESS = byte(iota) + byte(1)
-	DUPLICATE_LOGIN
-	WRONG_USERNAME
-	WRONG_PASSWORD
-	DUPLICATE_USERNAME
-	SYSTEM_MESSAGE
-	USER_MESSAGE
+	NULL = byte(iota)
+	REQ_LOGIN
+	REQ_REGIST
+	REQ_SET_INFO
+	REQ_QRY_BASIC
+	REQ_QRY_DETAIL
+	MSG_TXT
+	MSG_IMG
+	MSG_SYS
+	DATA_BASIC
+	DATA_DETAIL
+	RET_DUP_USR
+	RET_DUP_LOGIN
+	RET_WRONG_PWD
+	RET_WRONG_USR
+	RET_LOGIN_SUC
+	RET_SET_INFO_SUC
 )
 
 type Packet struct {

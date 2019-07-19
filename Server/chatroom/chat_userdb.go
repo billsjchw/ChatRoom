@@ -2,27 +2,9 @@ package chatroom
 
 import (
 	"database/sql"
-	"encoding/json"
-	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-type User struct {
-	Username string `json:"username,omitempty"`
-	Password string `json:"password,omitempty"`
-	Created  string `json:"created,omitempty"`
-	Nickname string `json:"nickname,omitempty"`
-	Age      string `json:"age,omitempty"`
-	Gender   string `json:"gender,omitempty"`
-	Email    string `json:"email,omitempty"`
-}
-
-func newUser(content []byte) *User {
-	user := new(User)
-	json.Unmarshal(content, user)
-	return user
-}
 
 func openDatabase(dbName string) *sql.DB {
 	db, _ := sql.Open("sqlite3", dbName)
@@ -42,8 +24,8 @@ func openDatabase(dbName string) *sql.DB {
 	return db
 }
 
-func query(db *sql.DB, username string, key string) (string, bool) {
-	stmt, _ := db.Prepare("SELECT " + key + " FROM userlist WHERE username=?")
+func query(db *sql.DB, username string, tag string) (string, bool) {
+	stmt, _ := db.Prepare("SELECT " + tag + " FROM userlist WHERE username=?")
 	row, _ := stmt.Query(username)
 	stmt.Close()
 	if !row.Next() {
@@ -55,15 +37,21 @@ func query(db *sql.DB, username string, key string) (string, bool) {
 	return result, true
 }
 
-func insert(db *sql.DB, user *User) bool {
-	_, exist := query(db, user.Username, "username")
+func insert(db *sql.DB, username string, password string) bool {
+	_, exist := query(db, username, "username")
 	if exist {
 		return true
 	}
-	user.Created = time.Now().Format("2006/01/02 15:04:05")
-	stmt, _ := db.Prepare("INSERT INTO userlist VALUES(?,?,?,?,?,?,?)")
-	stmt.Exec(user.Username, user.Password, user.Created, user.Nickname,
-		user.Age, user.Gender, user.Email)
+	created := GetCurrentTimeString()
+	nickname := username
+	stmt, _ := db.Prepare("INSERT INTO userlist(username,password,created,nickname) VALUES(?,?,?,?)")
+	stmt.Exec(username, password, created, nickname)
 	stmt.Close()
 	return false
+}
+
+func modify(db *sql.DB, username string, tag string, value string) {
+	stmt, _ := db.Prepare("UPDATE userinfo SET " + tag + "=? WHERE username=?")
+	stmt.Exec(value, username)
+	stmt.Close()
 }

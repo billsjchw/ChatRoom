@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net"
+	"reflect"
 	"strconv"
 )
 
@@ -16,14 +17,10 @@ type ChatServer struct {
 	leave     chan string
 }
 
-type SysMsg struct {
-	Content string `json:"content,omitempty"`
-}
-
 type LogRequest struct {
-	user  *User
-	ret   chan byte
-	input chan *Packet
+	user    *User
+	ret     chan byte
+	cliChan chan *Packet
 }
 
 func NewChatServer(addr string, port int, dbName string) *ChatServer {
@@ -63,23 +60,23 @@ func (server *ChatServer) handlePublic() {
 	for {
 		select {
 		case packet := <-server.broadcast:
-			for _, input := range online {
-				input <- packet
+			for _, cliChan := range online {
+				cliChan <- packet
 			}
 		case req := <-server.login:
 			if _, flag := online[req.user.Username]; flag {
-				req.ret <- DUPLICATE_LOGIN
+				req.ret <- RET_DUP_LOGIN
 				break
 			}
 			code := server.checkLogin(req.user.Username, req.user.Password)
-			if code == SUCCESS {
-				online[req.user.Username] = req.input
+			if code == RET_LOGIN_SUC {
+				online[req.user.Username] = req.cliChan
 			}
 			req.ret <- code
 		case req := <-server.regist:
-			code := server.handleRegist(req.user)
-			if code == SUCCESS {
-				online[req.user.Username] = req.input
+			code := server.handleRegist(req.user.Username, req.user.Password)
+			if code == RET_LOGIN_SUC {
+				online[req.user.Username] = req.cliChan
 			}
 			req.ret <- code
 		case username := <-server.leave:
@@ -90,26 +87,27 @@ func (server *ChatServer) handlePublic() {
 }
 
 func (server *ChatServer) handleClient(client net.Conn) {
-	input := make(chan *Packet)
+	cliChan := make(chan *Packet)
 	defer func() {
 		client.Close()
-		PrintClientMsg("connection " + client.RemoteAddr().String() + " closes")
+		PrintClientMsg("connection from " + client.RemoteAddr().String() + " closes")
 	}()
-	var user *User
+	var username string
 	code := NULL
-	for code != SUCCESS {
+	for code != RET_LOGIN_SUC {
 		packet, err := RcvPacket(client)
 		if err != nil {
 			return
 		}
-		user = newUser(packet.Content)
+		user := jsonToUser(packet.Content)
+		username = user.Username
 		ret := make(chan byte)
 		switch packet.Code {
-		case LOGIN:
-			server.login <- newLogRequest(user, ret, input)
+		case REQ_LOGIN:
+			server.login <- newLogRequest(user, ret, cliChan)
 			code = <-ret
-		case REGIST:
-			server.regist <- newLogRequest(user, ret, input)
+		case REQ_REGIST:
+			server.regist <- newLogRequest(user, ret, cliChan)
 			code = <-ret
 		}
 		err = SendPacket(client, NewPacket(code, nil))
@@ -117,65 +115,121 @@ func (server *ChatServer) handleClient(client net.Conn) {
 			return
 		}
 	}
-	content, _ := json.Marshal(newSysMsg("User " + user.Username + " enters the chat room."))
-	server.broadcast <- NewPacket(SYSTEM_MESSAGE, content)
-	go writeClient(client, input)
+	content, _ := json.Marshal(enterMsg(username))
+	server.broadcast <- NewPacket(MSG_SYS, content)
+	go writeClient(client, cliChan)
 	for {
 		packet, err := RcvPacket(client)
 		if err != nil {
-			server.leave <- user.Username
-			content, _ := json.Marshal(newSysMsg("User " + user.Username + " leaves the chat room."))
-			server.broadcast <- NewPacket(SYSTEM_MESSAGE, content)
+			server.leave <- username
+			content, _ := json.Marshal(leaveMsg(username))
+			server.broadcast <- NewPacket(MSG_SYS, content)
 			return
 		}
 		switch packet.Code {
-		case MESSAGE:
-			server.broadcast <- NewPacket(USER_MESSAGE, packet.Content)
+		case MSG_TXT, MSG_IMG:
+			server.broadcast <- packet
+		case REQ_SET_INFO:
+			user := jsonToUser(packet.Content)
+			server.setInfo(user)
+			cliChan <- NewPacket(RET_SET_INFO_SUC, nil)
+			basic := detailToBasic(user)
+			content, _ = json.Marshal(basic)
+			server.broadcast <- NewPacket(DATA_BASIC, content)
+		case REQ_QRY_BASIC:
+			username := jsonToUser(packet.Content).Username
+			user := server.basicInfo(username)
+			content, _ := json.Marshal(user)
+			cliChan <- NewPacket(DATA_BASIC, content)
+		case REQ_QRY_DETAIL:
+			username := jsonToUser(packet.Content).Username
+			user := server.detailInfo(username)
+			content, _ := json.Marshal(user)
+			cliChan <- NewPacket(DATA_DETAIL, content)
 		}
 	}
 }
 
-func writeClient(client net.Conn, input chan *Packet) {
-	for packet := range input {
+func writeClient(client net.Conn, cliChan chan *Packet) {
+	for packet := range cliChan {
 		err := SendPacket(client, packet)
 		if err != nil {
 			client.Close()
 			break
 		}
 	}
-	for range input {
+	for range cliChan {
 	}
 }
 
 func (server *ChatServer) checkLogin(username string, password string) byte {
 	right, exist := query(server.db, username, "password")
 	if !exist {
-		return WRONG_USERNAME
+		return RET_WRONG_USR
 	}
 	if password != right {
-		return WRONG_PASSWORD
+		return RET_WRONG_PWD
 	}
-	return SUCCESS
+	return RET_LOGIN_SUC
 }
 
-func (server *ChatServer) handleRegist(user *User) byte {
-	exist := insert(server.db, user)
+func (server *ChatServer) handleRegist(username string, password string) byte {
+	exist := insert(server.db, username, password)
 	if exist {
-		return DUPLICATE_USERNAME
+		return RET_DUP_USR
 	}
-	return SUCCESS
+	return RET_LOGIN_SUC
 }
 
-func newSysMsg(content string) *SysMsg {
-	msg := new(SysMsg)
-	msg.Content = content
-	return msg
+func (server *ChatServer) setInfo(user *User) {
+	username := user.Username
+	userType := reflect.TypeOf(user)
+	userVal := reflect.ValueOf(user)
+	for i := 0; i < userType.NumField(); i++ {
+		tag := string(userType.Field(i).Tag)
+		value := userVal.Field(i).String()
+		if tag != "username" {
+			modify(server.db, username, tag, value)
+		}
+	}
 }
 
-func newLogRequest(user *User, ret chan byte, input chan *Packet) *LogRequest {
+func (server *ChatServer) basicInfo(username string) *User {
+	user := new(User)
+	user.Username = username
+	user.Nickname, _ = query(server.db, username, "nickname")
+	return user
+}
+
+func (server *ChatServer) detailInfo(username string) *User {
+	user := new(User)
+	userType := reflect.TypeOf(user)
+	userVal := reflect.ValueOf(user)
+	for i := 0; i < userType.NumField(); i++ {
+		tag := string(userType.Field(i).Tag)
+		value, _ := query(server.db, username, tag)
+		elem := userVal.Field(i).Elem()
+		elem.SetString(value)
+	}
+	return user
+}
+
+func newLogRequest(user *User, ret chan byte, cliChan chan *Packet) *LogRequest {
 	req := new(LogRequest)
 	req.user = user
 	req.ret = ret
-	req.input = input
+	req.cliChan = cliChan
 	return req
+}
+
+func enterMsg(username string) *Message {
+	content := "User " + username + " enters the chat room."
+	msg := newMessage("system", content, GetCurrentTimeString())
+	return msg
+}
+
+func leaveMsg(username string) *Message {
+	content := "User " + username + " leaves the chat room."
+	msg := newMessage("system", content, GetCurrentTimeString())
+	return msg
 }
