@@ -3,35 +3,31 @@
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QByteArray>
 #include <QTcpSocket>
+#include <iostream>
 
-class Packet {
+class Packet: public QObject {
 public:
     char code;
     QJsonObject content;
-    bool receive(QTcpSocket socket) {
-        std::pair<QByteArray, bool> ret;
-        ret = readNByte(socket, 1);
-        if (!ret.second)
-            return false;
-        code = ret.first[0];
-        ret = readNByte(socket, 4);
-        if (!ret.second)
-            return false;
-        uint32_t size = binaryToUint32(ret.first);
-        ret = readNByte(socket, size);
-        if (!ret.second)
-            return false;
-        content = jsonToObject(ret.first);
+    void receive(QTcpSocket & socket) {
+        QByteArray binary = readNByte(socket, 1);
+        code = binary[0];
+        binary = readNByte(socket, 4);
+        uint32_t size = binaryToUint32(binary);
+        binary = readNByte(socket, size);
+        content = jsonToObject(binary);
     }
-    bool send(QTcpSocket socket) {
+    void send(QTcpSocket & socket) {
         QByteArray binary;
         binary.append(code);
         QByteArray json = objToJson(content);
         uint32_t size = json.size();
         binary.append((char *) &size, 4);
         binary.append(json);
-        return socket.write(binary) != -1;
+        socket.write(binary);
+        socket.flush();
     }
 private:
     static QByteArray objToJson(const QJsonObject & obj) {
@@ -42,18 +38,18 @@ private:
         QJsonDocument doc = QJsonDocument::fromJson(json);
         return doc.object();
     }
-    static std::pair<QByteArray, bool> readNByte(QTcpSocket socket, uint32_t n) {
+    static QByteArray readNByte(QTcpSocket & socket, uint32_t n) {
         QByteArray binary;
+        while (socket.bytesAvailable() < n)
+            socket.waitForReadyRead(-1);
         char * buffer = new char[BUFSIZ];
         for (uint32_t left = n; left > 0; ) {
-            k = socket.read(buffer, std::min(BUFSIZ, left));
-            if (k == -1)
-                return std::make_pair(QByteArray(), false);
+            int k = socket.read(buffer, std::min(left, uint32_t(BUFSIZ)));
             binary.append(buffer, k);
             left -= k;
         }
         delete buffer;
-        return std::make_pair(binary, true);
+        return binary;
     }
     static uint32_t binaryToUint32(const QByteArray & binary) {
         uint32_t ret = 0;

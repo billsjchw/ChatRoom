@@ -1,0 +1,24 @@
+#ifndef PACKET_CODE_H
+#define PACKET_CODE_H
+
+enum PacketCode {
+    NULL_CODE,
+    REQ_LOGIN,
+    REQ_REGIST,
+    REQ_SET_INFO,
+    REQ_QRY_BASIC,
+    REQ_QRY_DETAIL,
+    MSG_TXT,
+    MSG_IMG,
+    MSG_SYS,
+    DATA_BASIC,
+    DATA_DETAIL,
+    RET_DUP_USR,
+    RET_DUP_LOGIN,
+    RET_WRONG_PWD,
+    RET_WRONG_USR,
+    RET_LOGIN_SUC,
+    RET_SET_INFO_SUC
+};
+
+#endif // PACKET_CODE_H
