@@ -54,6 +54,7 @@ public:
         password->setObjectName(QStringLiteral("password"));
         password->setEnabled(false);
         password->setGeometry(QRect(190, 80, 113, 25));
+        password->setEchoMode(QLineEdit::Password);
         username = new QLineEdit(centralwidget);
         username->setObjectName(QStringLiteral("username"));
         username->setEnabled(false);

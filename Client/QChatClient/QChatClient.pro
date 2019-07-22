@@ -2,7 +2,8 @@ HEADERS += \
     login_window.h \
     packet.h \
     packet_code.h \
-    chat_window.h
+    chat_window.h \
+    socket_handler.h
 
 FORMS += \
     login_window.ui \

@@ -5,13 +5,16 @@
 #include <QJsonObject>
 #include <QByteArray>
 #include <QTcpSocket>
-#include <iostream>
+#include "packet_code.h"
 
-class Packet: public QObject {
+class Packet{
 public:
     char code;
     QJsonObject content;
-    void receive(QTcpSocket & socket) {
+    Packet() {}
+    Packet(char code, const QJsonObject & content):
+        code(code), content(content) {}
+    void receive(QTcpSocket * socket) {
         QByteArray binary = readNByte(socket, 1);
         code = binary[0];
         binary = readNByte(socket, 4);
@@ -19,15 +22,16 @@ public:
         binary = readNByte(socket, size);
         content = jsonToObject(binary);
     }
-    void send(QTcpSocket & socket) {
+    void send(QTcpSocket * socket) {
         QByteArray binary;
         binary.append(code);
         QByteArray json = objToJson(content);
         uint32_t size = json.size();
         binary.append((char *) &size, 4);
         binary.append(json);
-        socket.write(binary);
-        socket.flush();
+        socket->write(binary);
+        while (socket->bytesToWrite())
+            socket->waitForBytesWritten();
     }
 private:
     static QByteArray objToJson(const QJsonObject & obj) {
@@ -38,13 +42,13 @@ private:
         QJsonDocument doc = QJsonDocument::fromJson(json);
         return doc.object();
     }
-    static QByteArray readNByte(QTcpSocket & socket, uint32_t n) {
+    static QByteArray readNByte(QTcpSocket * socket, uint32_t n) {
         QByteArray binary;
-        while (socket.bytesAvailable() < n)
-            socket.waitForReadyRead(-1);
+        while (socket->bytesAvailable() < n)
+            socket->waitForReadyRead(-1);
         char * buffer = new char[BUFSIZ];
         for (uint32_t left = n; left > 0; ) {
-            int k = socket.read(buffer, std::min(left, uint32_t(BUFSIZ)));
+            int k = socket->read(buffer, std::min(left, uint32_t(BUFSIZ)));
             binary.append(buffer, k);
             left -= k;
         }

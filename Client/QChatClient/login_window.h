@@ -7,7 +7,7 @@
 #include <QTcpSocket>
 #include <QJsonObject>
 #include "packet.h"
-#include "packet_code.h"
+#include <QString>
 #include "ui_login_window.h"
 
 class LoginWindow: public QMainWindow {
@@ -15,25 +15,23 @@ class LoginWindow: public QMainWindow {
 private:
     Ui::LoginWindow * ui;
     ChatWindow * chatWindow;
-    QTcpSocket socket;
+    QTcpSocket * socket;
     Packet packet;
 public:
     LoginWindow() {
         ui = new Ui::LoginWindow;
         ui->setupUi(this);
+        socket = new QTcpSocket(this);
         connect(ui->connect, SIGNAL(triggered(bool)), this, SLOT(connectToServer()));
         connect(ui->login, SIGNAL(clicked(bool)), this, SLOT(handleLogin()));
         connect(ui->regist, SIGNAL(clicked(bool)), this, SLOT(handleRegist()));
-        connect(&socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleSocketError()));
     }
     ~LoginWindow() {
         delete ui;
     }
 protected:
     void closeEvent(QCloseEvent * event) {
-        socket.disconnectFromHost();
-        if (socket.state() != QAbstractSocket::UnconnectedState)
-            socket.waitForDisconnected();
+        socket->abort();
         event->accept();
     }
 private:
@@ -43,8 +41,9 @@ private:
         info.insert("password", password);
         return info;
     }
-    void jumpToChatWindow() {
-        chatWindow = new ChatWindow();
+    void jumpToChatWindow(QString username) {
+        disconnect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleSocketError()));
+        chatWindow = new ChatWindow(socket, username);
         connect(chatWindow, SIGNAL(finish()), this, SLOT(close()));
         hide();
         chatWindow->show();
@@ -66,11 +65,12 @@ private slots:
         ui->connect->setEnabled(false);
         ui->hint->setText("Connecting...");
         ui->hint->setStyleSheet("color:black");
-        socket.connectToHost("127.0.0.1", 8000);
-        if (socket.waitForConnected()) {
+        socket->connectToHost("127.0.0.1", 8000);
+        if (socket->waitForConnected()) {
             ui->hint->setText("Connect to the server successfully.");
             ui->hint->setStyleSheet("color:green");
             enableLogin();
+            connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleSocketError()));
         } else {
             ui->hint->setText("Fail to connect to the server.");
             ui->hint->setStyleSheet("color:red");
@@ -88,7 +88,7 @@ private slots:
         packet.send(socket);
         packet.receive(socket);
         if (packet.code == RET_LOGIN_SUC)
-            jumpToChatWindow();
+            jumpToChatWindow(username);
         else {
             enableLogin();
             ui->hint->setStyleSheet("color:red");
@@ -113,7 +113,7 @@ private slots:
         packet.send(socket);
         packet.receive(socket);
         if (packet.code == RET_LOGIN_SUC)
-            jumpToChatWindow();
+            jumpToChatWindow(username);
         else {
             enableLogin();
             ui->hint->setStyleSheet("color:red");
@@ -124,7 +124,7 @@ private slots:
         }
     }
     void handleSocketError() {
-        QMessageBox::critical(this, "Network Error", "Lose the connection with the server.", QMessageBox::Abort);
+        QMessageBox::critical(this, "Network Error", "Lose connection with the server.", QMessageBox::Abort);
         close();
     }
 };
