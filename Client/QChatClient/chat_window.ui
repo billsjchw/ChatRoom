@@ -61,15 +61,15 @@
     <property name="title">
      <string>More</string>
     </property>
-    <addaction name="setInfo"/>
+    <addaction name="info"/>
     <addaction name="logout"/>
    </widget>
    <addaction name="menuMore"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="setInfo">
+  <action name="info">
    <property name="text">
-    <string>Set personal information</string>
+    <string>Personal information</string>
    </property>
   </action>
   <action name="logout">

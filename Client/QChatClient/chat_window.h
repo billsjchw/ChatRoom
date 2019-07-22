@@ -4,12 +4,13 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include "personal_info_window.h"
 #include <QThread>
 #include <QTcpSocket>
 #include "socket_handler.h"
 #include "packet.h"
 #include <QJsonObject>
-#include <QTime>
+#include <QDateTime>
 #include <deque>
 #include <QString>
 #include "ui_chat_window.h"
@@ -36,6 +37,7 @@ public:
         thread.start();
         connect(ui->logout, SIGNAL(triggered(bool)), this, SLOT(close()));
         connect(ui->sendTxtMsg, SIGNAL(clicked(bool)), this, SLOT(handleSendTxtMsg()));
+        connect(ui->info, SIGNAL(triggered(bool)), this, SLOT(showPersonalInfo()));
         connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleSocketError()));
         connect(&socketHandler, SIGNAL(newMsg(Packet)), this, SLOT(handleNewMsg(Packet)));
         connect(this, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
@@ -100,13 +102,24 @@ private slots:
     void handleSendTxtMsg() {
         QString sender = username;
         QString content = ui->msgEdit->toPlainText();
-        QString sendTime = QTime::currentTime().toString("yyyy-MM-dd hh:mm:ss");
+        QString sendTime = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
         ui->msgEdit->setText("");
         QJsonObject msg;
         msg.insert("sender", sender);
         msg.insert("content", content);
         msg.insert("send_time", sendTime);
         emit packetToSend(Packet(MSG_TXT, msg));
+    }
+    void showPersonalInfo() {
+        ui->info->setEnabled(false);
+        PersonalInfoWindow * personalInfoWindow = new PersonalInfoWindow(this, username);
+        connect(personalInfoWindow, SIGNAL(finish()), this, SLOT(enablePersonalInfo()));
+        connect(&socketHandler, SIGNAL(setInfoResp(Packet)), personalInfoWindow, SLOT(notifySubmitFinish(Packet)));
+        connect(personalInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
+        personalInfoWindow->show();
+    }
+    void enablePersonalInfo() {
+        ui->info->setEnabled(true);
     }
 };
 

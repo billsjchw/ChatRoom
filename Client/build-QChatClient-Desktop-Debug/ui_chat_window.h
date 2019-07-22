@@ -28,7 +28,7 @@ QT_BEGIN_NAMESPACE
 class Ui_ChatWindow
 {
 public:
-    QAction *setInfo;
+    QAction *info;
     QAction *logout;
     QWidget *centralwidget;
     QTextBrowser *msgBrowser;
@@ -43,8 +43,8 @@ public:
         if (ChatWindow->objectName().isEmpty())
             ChatWindow->setObjectName(QStringLiteral("ChatWindow"));
         ChatWindow->resize(739, 545);
-        setInfo = new QAction(ChatWindow);
-        setInfo->setObjectName(QStringLiteral("setInfo"));
+        info = new QAction(ChatWindow);
+        info->setObjectName(QStringLiteral("info"));
         logout = new QAction(ChatWindow);
         logout->setObjectName(QStringLiteral("logout"));
         centralwidget = new QWidget(ChatWindow);
@@ -70,7 +70,7 @@ public:
         ChatWindow->setStatusBar(statusbar);
 
         menubar->addAction(menuMore->menuAction());
-        menuMore->addAction(setInfo);
+        menuMore->addAction(info);
         menuMore->addAction(logout);
 
         retranslateUi(ChatWindow);
@@ -81,7 +81,7 @@ public:
     void retranslateUi(QMainWindow *ChatWindow)
     {
         ChatWindow->setWindowTitle(QApplication::translate("ChatWindow", "Chat Room", Q_NULLPTR));
-        setInfo->setText(QApplication::translate("ChatWindow", "Set personal information", Q_NULLPTR));
+        info->setText(QApplication::translate("ChatWindow", "Personal information", Q_NULLPTR));
         logout->setText(QApplication::translate("ChatWindow", "Logout", Q_NULLPTR));
         sendTxtMsg->setText(QApplication::translate("ChatWindow", "Send", Q_NULLPTR));
         menuMore->setTitle(QApplication::translate("ChatWindow", "More", Q_NULLPTR));

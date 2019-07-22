@@ -18,6 +18,7 @@ public:
     }
 signals:
     void newMsg(Packet packet);
+    void setInfoResp(Packet packet);
 private slots:
     void receivePacket() {
         while (socket->bytesAvailable()) {
@@ -25,6 +26,8 @@ private slots:
             switch (packet.code) {
             case MSG_TXT: case MSG_SYS:
                 emit newMsg(packet); break;
+            case RET_SET_INFO_SUC:
+                emit setInfoResp(packet); break;
             }
         }
     }
