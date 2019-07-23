@@ -6,6 +6,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type ChatServer struct {
@@ -130,9 +131,12 @@ func (server *ChatServer) handleClient(client net.Conn) {
 		case MSG_TXT, MSG_IMG:
 			server.broadcast <- packet
 		case REQ_SET_INFO:
-			user := jsonToUser(packet.Content)
+			req := jsonToSetInfoReq(packet.Content)
+			user := &req.Info
 			server.setInfo(user)
-			cliChan <- NewPacket(RET_SET_INFO_SUC, nil)
+			resp := newSetInfoResp(req.ReqTime)
+			content, _ := json.Marshal(resp)
+			cliChan <- NewPacket(RET_SET_INFO_SUC, content)
 			basic := detailToBasic(user)
 			content, _ = json.Marshal(basic)
 			server.broadcast <- NewPacket(DATA_BASIC, content)
@@ -183,12 +187,12 @@ func (server *ChatServer) handleRegist(username string, password string) byte {
 
 func (server *ChatServer) setInfo(user *User) {
 	username := user.Username
-	userType := reflect.TypeOf(user)
-	userVal := reflect.ValueOf(user)
+	userType := reflect.TypeOf(user).Elem()
+	userVal := reflect.ValueOf(user).Elem()
 	for i := 0; i < userType.NumField(); i++ {
-		tag := string(userType.Field(i).Tag)
+		tag := strings.Split(userType.Field(i).Tag.Get("json"), ",")[0]
 		value := userVal.Field(i).String()
-		if tag != "username" {
+		if tag != "username" && tag != "created" && tag != "password" {
 			modify(server.db, username, tag, value)
 		}
 	}
@@ -203,13 +207,12 @@ func (server *ChatServer) basicInfo(username string) *User {
 
 func (server *ChatServer) detailInfo(username string) *User {
 	user := new(User)
-	userType := reflect.TypeOf(user)
-	userVal := reflect.ValueOf(user)
+	userType := reflect.TypeOf(user).Elem()
+	userVal := reflect.ValueOf(user).Elem()
 	for i := 0; i < userType.NumField(); i++ {
-		tag := string(userType.Field(i).Tag)
+		tag := strings.Split(userType.Field(i).Tag.Get("json"), ",")[0]
 		value, _ := query(server.db, username, tag)
-		elem := userVal.Field(i).Elem()
-		elem.SetString(value)
+		userVal.Field(i).SetString(value)
 	}
 	return user
 }

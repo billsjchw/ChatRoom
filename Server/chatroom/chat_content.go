@@ -51,3 +51,24 @@ func newUser(username string, password string) *User {
 	user.Password = password
 	return user
 }
+
+type SetInfoReq struct {
+	ReqTime string `json:"req_time,omitempty"`
+	Info    User   `json:"info,omitempty"`
+}
+
+func jsonToSetInfoReq(content []byte) *SetInfoReq {
+	setInfoReq := new(SetInfoReq)
+	json.Unmarshal(content, setInfoReq)
+	return setInfoReq
+}
+
+type SetInfoResp struct {
+	ReqTime string `json:"req_time,omitempty"`
+}
+
+func newSetInfoResp(reqTime string) *SetInfoResp {
+	setInfoResp := new(SetInfoResp)
+	setInfoResp.ReqTime = reqTime
+	return setInfoResp
+}

@@ -51,7 +51,7 @@ func insert(db *sql.DB, username string, password string) bool {
 }
 
 func modify(db *sql.DB, username string, tag string, value string) {
-	stmt, _ := db.Prepare("UPDATE userinfo SET " + tag + "=? WHERE username=?")
+	stmt, _ := db.Prepare("UPDATE userlist SET " + tag + "=? WHERE username=?")
 	stmt.Exec(value, username)
 	stmt.Close()
 }
