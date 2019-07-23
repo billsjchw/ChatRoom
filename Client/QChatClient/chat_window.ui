@@ -47,6 +47,19 @@
      <string>Send</string>
     </property>
    </widget>
+   <widget class="QPushButton" name="sendImgMsg">
+    <property name="geometry">
+     <rect>
+      <x>470</x>
+      <y>470</y>
+      <width>101</width>
+      <height>25</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Send Pictrue</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">

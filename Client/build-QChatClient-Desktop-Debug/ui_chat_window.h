@@ -35,6 +35,7 @@ public:
     QTextBrowser *msgBrowser;
     QTextEdit *msgEdit;
     QPushButton *sendTxtMsg;
+    QPushButton *sendImgMsg;
     QMenuBar *menubar;
     QMenu *menuMore;
     QStatusBar *statusbar;
@@ -61,6 +62,9 @@ public:
         sendTxtMsg = new QPushButton(centralwidget);
         sendTxtMsg->setObjectName(QStringLiteral("sendTxtMsg"));
         sendTxtMsg->setGeometry(QRect(580, 470, 89, 25));
+        sendImgMsg = new QPushButton(centralwidget);
+        sendImgMsg->setObjectName(QStringLiteral("sendImgMsg"));
+        sendImgMsg->setGeometry(QRect(470, 470, 101, 25));
         ChatWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(ChatWindow);
         menubar->setObjectName(QStringLiteral("menubar"));
@@ -89,6 +93,7 @@ public:
         logout->setText(QApplication::translate("ChatWindow", "Logout", Q_NULLPTR));
         usernameOrNickname->setText(QApplication::translate("ChatWindow", "Show username/nickname", Q_NULLPTR));
         sendTxtMsg->setText(QApplication::translate("ChatWindow", "Send", Q_NULLPTR));
+        sendImgMsg->setText(QApplication::translate("ChatWindow", "Send Pictrue", Q_NULLPTR));
         menuMore->setTitle(QApplication::translate("ChatWindow", "More", Q_NULLPTR));
     } // retranslateUi
 

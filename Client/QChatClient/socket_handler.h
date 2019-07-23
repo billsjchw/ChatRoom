@@ -17,19 +17,23 @@ public:
     }
 signals:
     void newMsg(Packet packet);
+    void newImgMsg(Packet packet);
     void setInfoResp(Packet packet);
-    void basicInfoChange(Packet packet);
+    void basicUserInfo(Packet packet);
+    void detailUserInfo(Packet packet);
 private slots:
     void receivePacket() {
         while (socket->bytesAvailable()) {
             packet.receive(socket);
             switch (packet.code) {
-            case MSG_TXT: case MSG_SYS:
+            case MSG_TXT: case MSG_SYS: case MSG_IMG:
                 emit newMsg(packet); break;
             case RET_SET_INFO_SUC:
                 emit setInfoResp(packet); break;
             case DATA_BASIC:
-                emit basicInfoChange(packet);
+                emit basicUserInfo(packet); break;
+            case DATA_DETAIL:
+                emit detailUserInfo(packet); break;
             }
         }
     }

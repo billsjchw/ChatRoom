@@ -4,18 +4,26 @@
 #include <QMainWindow>
 #include <QMessageBox>
 #include <QInputDialog>
+#include <QFileDialog>
 #include <QKeyEvent>
 #include <QCloseEvent>
 #include "personal_info_window.h"
+#include "user_info_window.h"
 #include <QThread>
 #include <QTcpSocket>
 #include <QUrl>
 #include "socket_handler.h"
 #include "packet.h"
 #include <QJsonObject>
+#include <QImage>
+#include <QByteArray>
+#include <QBuffer>
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
 #include <deque>
 #include <map>
+#include <utility>
 #include <QString>
 #include <QStringList>
 #include "ui_chat_window.h"
@@ -33,13 +41,17 @@ private:
     std::deque<Packet> msgList;
     std::map<QString, QString> nicknameList;
     QString username;
+    QString path;
     bool showNickname;
 public:
     ChatWindow(QTcpSocket * socket, QString username):
-        socketHandler(socket), username(username), showNickname(true) {
+        socketHandler(socket), username(username), showNickname(true),
+        path(QDir::homePath() + "/tmp/ChatRoom/" + username + "/pic_rcv/") {
         setAttribute(Qt::WA_DeleteOnClose);
         ui = new Ui::ChatWindow;
         ui->setupUi(this);
+        QDir qDir;
+        qDir.mkpath(path);
         socketError = false;
         socketHandler.moveToThread(&thread);
         thread.start();
@@ -49,19 +61,26 @@ public:
         connect(socket, SIGNAL(readyRead()), &socketHandler, SLOT(receivePacket()), Qt::QueuedConnection);
         connect(&socketHandler, SIGNAL(newMsg(Packet)), this, SLOT(handleNewMsg(Packet)));
         connect(&socketHandler, SIGNAL(setInfoResp(Packet)), personalInfoWindow, SLOT(notifySubmitFinish(Packet)));
-        connect(&socketHandler, SIGNAL(basicInfoChange(Packet)), this, SLOT(handleBasicInfoChange(Packet)));
-        connect(this, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)), Qt::QueuedConnection);
+        connect(&socketHandler, SIGNAL(basicUserInfo(Packet)), this, SLOT(handleBasicUserInfo(Packet)));
+        connect(this, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
         connect(personalInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
         connect(ui->logout, SIGNAL(triggered(bool)), this, SLOT(close()));
         connect(ui->sendTxtMsg, SIGNAL(clicked(bool)), this, SLOT(handleSendTxtMsg()));
+        connect(ui->sendImgMsg, SIGNAL(clicked(bool)), this, SLOT(handleSendImgMsg()));
         connect(ui->info, SIGNAL(triggered(bool)), this, SLOT(showPersonalInfo()));
         connect(ui->usernameOrNickname, SIGNAL(triggered(bool)), this, SLOT(chooseNameKind()));
-        connect(ui->msgBrowser, SIGNAL(anchorClicked(QUrl)), this, SLOT(handleUserInfoQry(QUrl)));
+        connect(ui->msgBrowser, SIGNAL(anchorClicked(QUrl)), this, SLOT(handleUserInfoQuery(QUrl)));
         connect(socket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleSocketError()));
         emit socket->readyRead();
     }
     ~ChatWindow() {
         delete ui;
+        QDir qDir(path);
+        QFileInfoList qFileInfoList = qDir.entryInfoList(QDir::Files);
+        for (int i = 0; i < qFileInfoList.size(); ++i) {
+            QFile imgFile(qFileInfoList[i].filePath());
+            imgFile.remove();
+        }
     }
 protected:
     void keyPressEvent(QKeyEvent * event) {
@@ -85,25 +104,25 @@ protected:
     }
 private:
     void updateMsgBrowser() {
-        QString msgBrowserContent;
+        QString msgBrowserContent = "<body>";
+        // msgBrowserContent += "<img src=\"/home/bill/Pictures/flower.jpeg\" />";
         for (int i = 0; i < msgList.size(); ++i) {
             switch (msgList[i].code) {
             case MSG_TXT:
                 msgBrowserContent += makeTxtContent(msgList[i].content); break;
             case MSG_SYS:
                 msgBrowserContent += makeSysContent(msgList[i].content); break;
+            case MSG_IMG:
+                msgBrowserContent += makeImgContent(msgList[i].content); break;
             }
         }
+        msgBrowserContent += "</body>";
         ui->msgBrowser->setHtml(msgBrowserContent);
     }
-    QString makeTxtContent(QJsonObject msg) {
-        QString sender = msg.take("sender").toString();
-        QString content = msg.take("content").toString();
-        QString sendTime = msg.take("send_time").toString();
+    QString getSenderName(QString sender) {
         QString senderName = sender;
         if (showNickname) {
             if (!nicknameList.count(sender)) {
-                qDebug() << sender;
                 nicknameList[sender] = sender;
                 QJsonObject info;
                 info.insert("username", sender);
@@ -111,6 +130,13 @@ private:
             }
             senderName = nicknameList[sender];
         }
+        return senderName;
+    }
+    QString makeTxtContent(QJsonObject msg) {
+        QString sender = msg.take("sender").toString();
+        QString content = msg.take("content").toString();
+        QString sendTime = msg.take("send_time").toString();
+        QString senderName = getSenderName(sender);
         QString ret;
         ret += "<a href=\"" + sender + "\">" + senderName + "</a>";
         ret += "<font style=\"color:#2456CF\">" + plainToHtml(" " + sendTime) + "</font><br>";
@@ -120,6 +146,17 @@ private:
     QString makeSysContent(QJsonObject msg) {
         QString content = msg.take("content").toString();
         return "<font style=\"color:#267F10\">" + plainToHtml("[SYSTEM] " + content) + "</font><br>";
+    }
+    QString makeImgContent(QJsonObject msg) {
+        QString sender = msg.take("sender").toString();
+        QString filename = msg.take("content").toString();
+        QString sendTime = msg.take("send_time").toString();
+        QString senderName = getSenderName(sender);
+        QString ret;
+        ret += "<a href=\"" + sender + "\">" + senderName + "</a>";
+        ret += "<font style=\"color:#2456CF\">" + plainToHtml(" " + sendTime) + "</font><br>";
+        ret += plainToHtml("    ") + "<img src=\"" + filename + "\"/><br>";
+        return ret;
     }
     QString plainToHtml(const QString & plain) {
         QString html = plain;
@@ -142,8 +179,22 @@ private slots:
         close();
     }
     void handleNewMsg(Packet packet) {
-        if (msgList.size() == msgListCapacity)
+        if (msgList.size() == msgListCapacity) {
+            if (msgList.front().code == MSG_IMG) {
+                QFile imgFile(msgList.front().content.take("content").toString());
+                imgFile.remove();
+            }
             msgList.pop_front();
+        }
+        if (packet.code == MSG_IMG) {
+            QString content = packet.content.take("content").toString();
+            QByteArray binary = QByteArray::fromBase64(content.toLocal8Bit());
+            QImage img;
+            img.loadFromData(binary, "JPG");
+            QString filename = path + QDateTime::currentDateTime().toString("yyyyMMddhhmmsszzz") + ".jpg";
+            img.save(filename, "JPG");
+            packet.content.insert("content", filename);
+        }
         msgList.push_back(packet);
         updateMsgBrowser();
     }
@@ -158,10 +209,26 @@ private slots:
         msg.insert("send_time", sendTime);
         emit packetToSend(Packet(MSG_TXT, msg));
     }
+    void handleSendImgMsg() {
+        QString fileName = QFileDialog::getOpenFileName(this, "Open File", "/home", "Images (*.jpg *.jpeg)");
+        QImage img(fileName, "JPG");
+        QByteArray binary;
+        QBuffer buffer(&binary);
+        buffer.open(QIODevice::WriteOnly);
+        img.save(&buffer, "JPG");
+        QString sender = username;
+        QString content = QString::fromLocal8Bit(binary.toBase64());
+        QString sendTime = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+        QJsonObject msg;
+        msg.insert("sender", sender);
+        msg.insert("content", content);
+        msg.insert("send_time", sendTime);
+        emit packetToSend(Packet(MSG_IMG, msg));
+    }
     void showPersonalInfo() {
         personalInfoWindow->show();
     }
-    void handleBasicInfoChange(Packet packet) {
+    void handleBasicUserInfo(Packet packet) {
         QJsonObject info = packet.content;
         QString username = info.take("username").toString();
         QString nickname = info.take("nickname").toString();
@@ -179,8 +246,12 @@ private slots:
             updateMsgBrowser();
         }
     }
-    void handleUserInfoQry(QUrl username) {
-        qDebug() << username;
+    void handleUserInfoQuery(QUrl url) {
+        UserInfoWindow * userInfoWindow = new UserInfoWindow(this, url.toString());
+        connect(&socketHandler, SIGNAL(detailUserInfo(Packet)), userInfoWindow, SLOT(updateUserInfo(Packet)));
+        connect(userInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
+        userInfoWindow->startQuery();
+        userInfoWindow->show();
     }
 };
 

@@ -53,12 +53,14 @@ OBJECTS_DIR   = ./
 SOURCES       = ../QChatClient/main.cpp moc_login_window.cpp \
 		moc_chat_window.cpp \
 		moc_socket_handler.cpp \
-		moc_personal_info_window.cpp
+		moc_personal_info_window.cpp \
+		moc_user_info_window.cpp
 OBJECTS       = main.o \
 		moc_login_window.o \
 		moc_chat_window.o \
 		moc_socket_handler.o \
-		moc_personal_info_window.o
+		moc_personal_info_window.o \
+		moc_user_info_window.o
 DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/unix.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/common/linux.conf \
@@ -113,6 +115,7 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_post.prf \
+		../QChatClient/.qmake.stash \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/toolchain.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/default_pre.prf \
@@ -137,7 +140,8 @@ DIST          = /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		../QChatClient/packet_code.h \
 		../QChatClient/chat_window.h \
 		../QChatClient/socket_handler.h \
-		../QChatClient/personal_info_window.h ../QChatClient/main.cpp
+		../QChatClient/personal_info_window.h \
+		../QChatClient/user_info_window.h ../QChatClient/main.cpp
 QMAKE_TARGET  = QChatClient
 DESTDIR       = 
 TARGET        = QChatClient
@@ -146,7 +150,7 @@ TARGET        = QChatClient
 first: all
 ####### Build rules
 
-$(TARGET): ui_login_window.h ui_chat_window.h ui_personal_info_window.h $(OBJECTS)  
+$(TARGET): ui_login_window.h ui_chat_window.h ui_personal_info_window.h ui_user_info_window.h $(OBJECTS)  
 	$(LINK) $(LFLAGS) -o $(TARGET) $(OBJECTS) $(OBJCOMP) $(LIBS)
 
 Makefile: ../QChatClient/QChatClient.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
@@ -203,6 +207,7 @@ Makefile: ../QChatClient/QChatClient.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/l
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_post.prf \
+		.qmake.stash \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/toolchain.prf \
 		/usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/default_pre.prf \
@@ -282,6 +287,7 @@ Makefile: ../QChatClient/QChatClient.pro /usr/lib/x86_64-linux-gnu/qt5/mkspecs/l
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/qt_config.prf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++/qmake.conf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/spec_post.prf:
+.qmake.stash:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/exclusive_builds.prf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/toolchain.prf:
 /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/default_pre.prf:
@@ -321,9 +327,9 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../QChatClient/login_window.h ../QChatClient/packet.h ../QChatClient/packet_code.h ../QChatClient/chat_window.h ../QChatClient/socket_handler.h ../QChatClient/personal_info_window.h $(DISTDIR)/
+	$(COPY_FILE) --parents ../QChatClient/login_window.h ../QChatClient/packet.h ../QChatClient/packet_code.h ../QChatClient/chat_window.h ../QChatClient/socket_handler.h ../QChatClient/personal_info_window.h ../QChatClient/user_info_window.h $(DISTDIR)/
 	$(COPY_FILE) --parents ../QChatClient/main.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents ../QChatClient/login_window.ui ../QChatClient/chat_window.ui ../QChatClient/personal_info_window.ui $(DISTDIR)/
+	$(COPY_FILE) --parents ../QChatClient/login_window.ui ../QChatClient/chat_window.ui ../QChatClient/personal_info_window.ui ../QChatClient/user_info_window.ui $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -355,15 +361,17 @@ compiler_moc_predefs_clean:
 moc_predefs.h: /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 	g++ -pipe -g -Wall -W -dM -E -o moc_predefs.h /usr/lib/x86_64-linux-gnu/qt5/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all: moc_login_window.cpp moc_chat_window.cpp moc_socket_handler.cpp moc_personal_info_window.cpp
+compiler_moc_header_make_all: moc_login_window.cpp moc_chat_window.cpp moc_socket_handler.cpp moc_personal_info_window.cpp moc_user_info_window.cpp
 compiler_moc_header_clean:
-	-$(DEL_FILE) moc_login_window.cpp moc_chat_window.cpp moc_socket_handler.cpp moc_personal_info_window.cpp
+	-$(DEL_FILE) moc_login_window.cpp moc_chat_window.cpp moc_socket_handler.cpp moc_personal_info_window.cpp moc_user_info_window.cpp
 moc_login_window.cpp: ../QChatClient/chat_window.h \
 		../QChatClient/personal_info_window.h \
-		ui_personal_info_window.h \
-		../QChatClient/socket_handler.h \
 		../QChatClient/packet.h \
 		../QChatClient/packet_code.h \
+		ui_personal_info_window.h \
+		../QChatClient/user_info_window.h \
+		ui_user_info_window.h \
+		../QChatClient/socket_handler.h \
 		ui_chat_window.h \
 		ui_login_window.h \
 		../QChatClient/login_window.h \
@@ -372,10 +380,12 @@ moc_login_window.cpp: ../QChatClient/chat_window.h \
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/bill/Documents/Github/ChatRoom/Client/QChatClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include ../QChatClient/login_window.h -o moc_login_window.cpp
 
 moc_chat_window.cpp: ../QChatClient/personal_info_window.h \
-		ui_personal_info_window.h \
-		../QChatClient/socket_handler.h \
 		../QChatClient/packet.h \
 		../QChatClient/packet_code.h \
+		ui_personal_info_window.h \
+		../QChatClient/user_info_window.h \
+		ui_user_info_window.h \
+		../QChatClient/socket_handler.h \
 		ui_chat_window.h \
 		../QChatClient/chat_window.h \
 		moc_predefs.h \
@@ -389,17 +399,27 @@ moc_socket_handler.cpp: ../QChatClient/packet.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/bill/Documents/Github/ChatRoom/Client/QChatClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include ../QChatClient/socket_handler.h -o moc_socket_handler.cpp
 
-moc_personal_info_window.cpp: ui_personal_info_window.h \
+moc_personal_info_window.cpp: ../QChatClient/packet.h \
+		../QChatClient/packet_code.h \
+		ui_personal_info_window.h \
 		../QChatClient/personal_info_window.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
 	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/bill/Documents/Github/ChatRoom/Client/QChatClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include ../QChatClient/personal_info_window.h -o moc_personal_info_window.cpp
 
+moc_user_info_window.cpp: ../QChatClient/packet.h \
+		../QChatClient/packet_code.h \
+		ui_user_info_window.h \
+		../QChatClient/user_info_window.h \
+		moc_predefs.h \
+		/usr/lib/qt5/bin/moc
+	/usr/lib/qt5/bin/moc $(DEFINES) --include ./moc_predefs.h -I/usr/lib/x86_64-linux-gnu/qt5/mkspecs/linux-g++ -I/home/bill/Documents/Github/ChatRoom/Client/QChatClient -I/usr/include/x86_64-linux-gnu/qt5 -I/usr/include/x86_64-linux-gnu/qt5/QtWidgets -I/usr/include/x86_64-linux-gnu/qt5/QtGui -I/usr/include/x86_64-linux-gnu/qt5/QtNetwork -I/usr/include/x86_64-linux-gnu/qt5/QtCore -I. -I/usr/include/c++/7 -I/usr/include/x86_64-linux-gnu/c++/7 -I/usr/include/c++/7/backward -I/usr/lib/gcc/x86_64-linux-gnu/7/include -I/usr/local/include -I/usr/lib/gcc/x86_64-linux-gnu/7/include-fixed -I/usr/include/x86_64-linux-gnu -I/usr/include ../QChatClient/user_info_window.h -o moc_user_info_window.cpp
+
 compiler_moc_source_make_all:
 compiler_moc_source_clean:
-compiler_uic_make_all: ui_login_window.h ui_chat_window.h ui_personal_info_window.h
+compiler_uic_make_all: ui_login_window.h ui_chat_window.h ui_personal_info_window.h ui_user_info_window.h
 compiler_uic_clean:
-	-$(DEL_FILE) ui_login_window.h ui_chat_window.h ui_personal_info_window.h
+	-$(DEL_FILE) ui_login_window.h ui_chat_window.h ui_personal_info_window.h ui_user_info_window.h
 ui_login_window.h: ../QChatClient/login_window.ui \
 		/usr/lib/qt5/bin/uic
 	/usr/lib/qt5/bin/uic ../QChatClient/login_window.ui -o ui_login_window.h
@@ -411,6 +431,10 @@ ui_chat_window.h: ../QChatClient/chat_window.ui \
 ui_personal_info_window.h: ../QChatClient/personal_info_window.ui \
 		/usr/lib/qt5/bin/uic
 	/usr/lib/qt5/bin/uic ../QChatClient/personal_info_window.ui -o ui_personal_info_window.h
+
+ui_user_info_window.h: ../QChatClient/user_info_window.ui \
+		/usr/lib/qt5/bin/uic
+	/usr/lib/qt5/bin/uic ../QChatClient/user_info_window.ui -o ui_user_info_window.h
 
 compiler_yacc_decl_make_all:
 compiler_yacc_decl_clean:
@@ -425,10 +449,12 @@ compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean compiler_ui
 main.o: ../QChatClient/main.cpp ../QChatClient/login_window.h \
 		../QChatClient/chat_window.h \
 		../QChatClient/personal_info_window.h \
-		ui_personal_info_window.h \
-		../QChatClient/socket_handler.h \
 		../QChatClient/packet.h \
 		../QChatClient/packet_code.h \
+		ui_personal_info_window.h \
+		../QChatClient/user_info_window.h \
+		ui_user_info_window.h \
+		../QChatClient/socket_handler.h \
 		ui_chat_window.h \
 		ui_login_window.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o ../QChatClient/main.cpp
@@ -444,6 +470,9 @@ moc_socket_handler.o: moc_socket_handler.cpp
 
 moc_personal_info_window.o: moc_personal_info_window.cpp 
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_personal_info_window.o moc_personal_info_window.cpp
+
+moc_user_info_window.o: moc_user_info_window.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_user_info_window.o moc_user_info_window.cpp
 
 ####### Install
 
