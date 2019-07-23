@@ -62,6 +62,7 @@
      <string>More</string>
     </property>
     <addaction name="info"/>
+    <addaction name="usernameOrNickname"/>
     <addaction name="logout"/>
    </widget>
    <addaction name="menuMore"/>
@@ -75,6 +76,11 @@
   <action name="logout">
    <property name="text">
     <string>Logout</string>
+   </property>
+  </action>
+  <action name="usernameOrNickname">
+   <property name="text">
+    <string>Show username/nickname</string>
    </property>
   </action>
  </widget>

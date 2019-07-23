@@ -14,11 +14,11 @@ public:
     SocketHandler(QTcpSocket * socket) {
         socket->setParent(this);
         this->socket = socket;
-        connect(socket, SIGNAL(readyRead()), this, SLOT(receivePacket()));
     }
 signals:
     void newMsg(Packet packet);
     void setInfoResp(Packet packet);
+    void basicInfoChange(Packet packet);
 private slots:
     void receivePacket() {
         while (socket->bytesAvailable()) {
@@ -28,6 +28,8 @@ private slots:
                 emit newMsg(packet); break;
             case RET_SET_INFO_SUC:
                 emit setInfoResp(packet); break;
+            case DATA_BASIC:
+                emit basicInfoChange(packet);
             }
         }
     }

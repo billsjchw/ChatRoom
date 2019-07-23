@@ -34,12 +34,13 @@ public:
     }
 protected:
     void closeEvent(QCloseEvent * event) {
-        event->accept();
-        emit finish();
+        event->ignore();
+        hide();
     }
 private:
     void disableEdit() {
-        ui->submit->setEnabled(false);
+        ui->submit->hide();
+        ui->hint->show();
         ui->nickname->setEnabled(false);
         ui->age->setEnabled(false);
         ui->gender->setEnabled(false);
@@ -47,11 +48,10 @@ private:
     }
 signals:
     void packetToSend(Packet packet);
-    void finish();
 private slots:
     void enableEdit() {
         ui->submit->show();
-        ui->submit->setEnabled(true);
+        ui->hint->hide();
         ui->nickname->setEnabled(true);
         ui->age->setEnabled(true);
         ui->gender->setEnabled(true);
@@ -76,7 +76,6 @@ private slots:
     void notifySubmitFinish(Packet packet) {
         QString reqTime = packet.content.take("req_time").toString();
         if (reqTime == lastReqTime) {
-            enableEdit();
             submitting = false;
             ui->hint->setText("Submit successfully.");
         }

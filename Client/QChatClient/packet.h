@@ -57,8 +57,9 @@ private:
     }
     static uint32_t binaryToUint32(const QByteArray & binary) {
         uint32_t ret = 0;
-        for (int i = 0; i < 4; ++i)
-            ret += (uint32_t) binary[i] << i;
+        for (int i = 0; i < 4; ++i) {
+            ret += ((uint32_t) binary[i] & (uint32_t) 0xFF) << (8 * i);
+        }
         return ret;
     }
 };

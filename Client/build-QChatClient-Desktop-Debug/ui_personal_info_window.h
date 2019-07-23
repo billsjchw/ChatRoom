@@ -53,7 +53,7 @@ public:
     {
         if (PersonalInfoWindow->objectName().isEmpty())
             PersonalInfoWindow->setObjectName(QStringLiteral("PersonalInfoWindow"));
-        PersonalInfoWindow->resize(461, 493);
+        PersonalInfoWindow->resize(461, 431);
         enableEdit = new QAction(PersonalInfoWindow);
         enableEdit->setObjectName(QStringLiteral("enableEdit"));
         centralwidget = new QWidget(PersonalInfoWindow);
@@ -107,7 +107,7 @@ public:
         submit->setGeometry(QRect(182, 340, 89, 25));
         hint = new QLabel(centralwidget);
         hint->setObjectName(QStringLiteral("hint"));
-        hint->setGeometry(QRect(120, 390, 221, 20));
+        hint->setGeometry(QRect(120, 340, 221, 20));
         hint->setAlignment(Qt::AlignCenter);
         PersonalInfoWindow->setCentralWidget(centralwidget);
         menubar = new QMenuBar(PersonalInfoWindow);
@@ -130,7 +130,7 @@ public:
 
     void retranslateUi(QMainWindow *PersonalInfoWindow)
     {
-        PersonalInfoWindow->setWindowTitle(QApplication::translate("PersonalInfoWindow", "Personal Info", Q_NULLPTR));
+        PersonalInfoWindow->setWindowTitle(QApplication::translate("PersonalInfoWindow", "Personal Information", Q_NULLPTR));
         enableEdit->setText(QApplication::translate("PersonalInfoWindow", "Enable Editing", Q_NULLPTR));
         label->setText(QApplication::translate("PersonalInfoWindow", "username", Q_NULLPTR));
         label_2->setText(QApplication::translate("PersonalInfoWindow", "created time", Q_NULLPTR));
