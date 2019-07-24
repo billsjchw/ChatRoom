@@ -88,7 +88,7 @@ func (server *ChatServer) handlePublic() {
 }
 
 func (server *ChatServer) handleClient(client net.Conn) {
-	cliChan := make(chan *Packet)
+	cliChan := make(chan *Packet, 50)
 	defer func() {
 		client.Close()
 		PrintClientMsg("connection from " + client.RemoteAddr().String() + " closes")
