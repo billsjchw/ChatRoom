@@ -34,8 +34,8 @@ public:
     }
 protected:
     void closeEvent(QCloseEvent * event) {
-        event->ignore();
-        hide();
+        event->accept();
+        emit finish();
     }
 private:
     void disableEdit() {
@@ -48,6 +48,7 @@ private:
     }
 signals:
     void packetToSend(Packet packet);
+    void finish();
 private slots:
     void enableEdit() {
         ui->submit->show();
@@ -56,6 +57,17 @@ private slots:
         ui->age->setEnabled(true);
         ui->gender->setEnabled(true);
         ui->email->setEnabled(true);
+    }
+    void updatePersonalInfo(Packet packet) {
+        QJsonObject info = packet.content;
+        if (info.take("username").toString() != username ||
+                !ui->submit->isHidden() || submitting)
+            return;
+        ui->created->setText(info.take("created").toString());
+        ui->nickname->setText(info.take("nickname").toString());
+        ui->age->setText(info.take("age").toString());
+        ui->gender->setCurrentText(info.take("gender").toString());
+        ui->email->setText(info.take("email").toString());
     }
     void handleSubmit() {
         disableEdit();

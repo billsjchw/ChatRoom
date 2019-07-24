@@ -20,22 +20,22 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>40</y>
-      <width>113</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="createdTime">
+   <widget class="QLineEdit" name="created">
     <property name="enabled">
      <bool>false</bool>
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>90</y>
-      <width>113</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -46,9 +46,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>140</y>
-      <width>113</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -59,9 +59,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>190</y>
-      <width>113</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -75,9 +75,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>290</y>
-      <width>113</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -166,9 +166,9 @@
     </property>
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>220</x>
       <y>240</y>
-      <width>111</width>
+      <width>151</width>
       <height>25</height>
      </rect>
     </property>
@@ -207,10 +207,10 @@
    <widget class="QLabel" name="hint">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>117</x>
       <y>340</y>
       <width>221</width>
-      <height>20</height>
+      <height>16</height>
      </rect>
     </property>
     <property name="text">

@@ -37,15 +37,15 @@ private:
     bool socketError;
     SocketHandler socketHandler;
     QThread thread;
-    PersonalInfoWindow * personalInfoWindow;
     std::deque<Packet> msgList;
     std::map<QString, QString> nicknameList;
     QString username;
     QString path;
     bool showNickname;
+    bool personalInfoOn;
 public:
     ChatWindow(QTcpSocket * socket, QString username):
-        socketHandler(socket), username(username), showNickname(true),
+        socketHandler(socket), username(username), showNickname(true), personalInfoOn(false),
         path(QDir::homePath() + "/tmp/ChatRoom/" + username + "/pic_rcv/") {
         setAttribute(Qt::WA_DeleteOnClose);
         ui = new Ui::ChatWindow;
@@ -55,15 +55,12 @@ public:
         socketError = false;
         socketHandler.moveToThread(&thread);
         thread.start();
-        personalInfoWindow = new PersonalInfoWindow(this, username);
         ui->msgBrowser->setOpenLinks(false);
         ui->msgBrowser->setOpenExternalLinks(false);
         connect(socket, SIGNAL(readyRead()), &socketHandler, SLOT(receivePacket()), Qt::QueuedConnection);
         connect(&socketHandler, SIGNAL(newMsg(Packet)), this, SLOT(handleNewMsg(Packet)));
-        connect(&socketHandler, SIGNAL(setInfoResp(Packet)), personalInfoWindow, SLOT(notifySubmitFinish(Packet)));
         connect(&socketHandler, SIGNAL(basicUserInfo(Packet)), this, SLOT(handleBasicUserInfo(Packet)));
         connect(this, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
-        connect(personalInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
         connect(ui->logout, SIGNAL(triggered(bool)), this, SLOT(close()));
         connect(ui->sendTxtMsg, SIGNAL(clicked(bool)), this, SLOT(handleSendTxtMsg()));
         connect(ui->sendImgMsg, SIGNAL(clicked(bool)), this, SLOT(handleSendImgMsg()));
@@ -105,7 +102,6 @@ protected:
 private:
     void updateMsgBrowser() {
         QString msgBrowserContent = "<body>";
-        // msgBrowserContent += "<img src=\"/home/bill/Pictures/flower.jpeg\" />";
         for (int i = 0; i < msgList.size(); ++i) {
             switch (msgList[i].code) {
             case MSG_TXT:
@@ -226,6 +222,17 @@ private slots:
         emit packetToSend(Packet(MSG_IMG, msg));
     }
     void showPersonalInfo() {
+        if (personalInfoOn)
+            return;
+        personalInfoOn = true;
+        PersonalInfoWindow * personalInfoWindow = new PersonalInfoWindow(this, username);
+        connect(personalInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
+        connect(&socketHandler, SIGNAL(detailUserInfo(Packet)), personalInfoWindow, SLOT(updatePersonalInfo(Packet)));
+        connect(&socketHandler, SIGNAL(setInfoResp(Packet)), personalInfoWindow, SLOT(notifySubmitFinish(Packet)));
+        connect(personalInfoWindow, SIGNAL(finish()), this, SLOT(personalInfoOff()));
+        QJsonObject info;
+        info.insert("username", username);
+        emit packetToSend(Packet(REQ_QRY_DETAIL, info));
         personalInfoWindow->show();
     }
     void handleBasicUserInfo(Packet packet) {
@@ -252,6 +259,9 @@ private slots:
         connect(userInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
         userInfoWindow->startQuery();
         userInfoWindow->show();
+    }
+    void personalInfoOff() {
+        personalInfoOn = false;
     }
 };
 
