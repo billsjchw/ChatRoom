@@ -15,11 +15,11 @@ class PersonalInfoWindow: public QMainWindow {
 private:
     Ui::PersonalInfoWindow * ui;
     QString username;
-    bool submitting;
+    bool submitting, edited;
     QString lastReqTime;
 public:
     PersonalInfoWindow(QWidget * parent, QString username):
-        username(username), submitting(false) {
+        username(username), submitting(false), edited(false) {
         setParent(parent);
         setWindowFlag(Qt::Window);
         ui = new Ui::PersonalInfoWindow;
@@ -57,11 +57,11 @@ private slots:
         ui->age->setEnabled(true);
         ui->gender->setEnabled(true);
         ui->email->setEnabled(true);
+        edited = true;
     }
     void updatePersonalInfo(Packet packet) {
         QJsonObject info = packet.content;
-        if (info.take("username").toString() != username ||
-                !ui->submit->isHidden() || submitting)
+        if (info.take("username").toString() != username || edited)
             return;
         ui->created->setText(info.take("created").toString());
         ui->nickname->setText(info.take("nickname").toString());

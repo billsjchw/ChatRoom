@@ -42,10 +42,10 @@ private:
     QString username;
     QString path;
     bool showNickname;
-    bool personalInfoOn;
+    bool personalInfoWindowOn;
 public:
     ChatWindow(QTcpSocket * socket, QString username):
-        socketHandler(socket), username(username), showNickname(true), personalInfoOn(false),
+        socketHandler(socket), username(username), showNickname(true), personalInfoWindowOn(false),
         path(QDir::homePath() + "/tmp/ChatRoom/" + username + "/pic_rcv/") {
         setAttribute(Qt::WA_DeleteOnClose);
         ui = new Ui::ChatWindow;
@@ -222,14 +222,14 @@ private slots:
         emit packetToSend(Packet(MSG_IMG, msg));
     }
     void showPersonalInfo() {
-        if (personalInfoOn)
+        if (personalInfoWindowOn)
             return;
-        personalInfoOn = true;
+        personalInfoWindowOn = true;
         PersonalInfoWindow * personalInfoWindow = new PersonalInfoWindow(this, username);
         connect(personalInfoWindow, SIGNAL(packetToSend(Packet)), &socketHandler, SLOT(sendPacket(Packet)));
         connect(&socketHandler, SIGNAL(detailUserInfo(Packet)), personalInfoWindow, SLOT(updatePersonalInfo(Packet)));
         connect(&socketHandler, SIGNAL(setInfoResp(Packet)), personalInfoWindow, SLOT(notifySubmitFinish(Packet)));
-        connect(personalInfoWindow, SIGNAL(finish()), this, SLOT(personalInfoOff()));
+        connect(personalInfoWindow, SIGNAL(finish()), this, SLOT(personalInfoWindowOff()));
         QJsonObject info;
         info.insert("username", username);
         emit packetToSend(Packet(REQ_QRY_DETAIL, info));
@@ -260,8 +260,8 @@ private slots:
         userInfoWindow->startQuery();
         userInfoWindow->show();
     }
-    void personalInfoOff() {
-        personalInfoOn = false;
+    void personalInfoWindowOff() {
+        personalInfoWindowOn = false;
     }
 };
 

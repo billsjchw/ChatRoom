@@ -22,7 +22,7 @@ QT_WARNING_PUSH
 QT_WARNING_DISABLE_DEPRECATED
 struct qt_meta_stringdata_ChatWindow_t {
     QByteArrayData data[16];
-    char stringdata0[203];
+    char stringdata0[209];
 };
 #define QT_MOC_LITERAL(idx, ofs, len) \
     Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER_WITH_OFFSET(len, \
@@ -46,7 +46,7 @@ QT_MOC_LITERAL(11, 128, 19), // "handleBasicUserInfo"
 QT_MOC_LITERAL(12, 148, 14), // "chooseNameKind"
 QT_MOC_LITERAL(13, 163, 19), // "handleUserInfoQuery"
 QT_MOC_LITERAL(14, 183, 3), // "url"
-QT_MOC_LITERAL(15, 187, 15) // "personalInfoOff"
+QT_MOC_LITERAL(15, 187, 21) // "personalInfoWindowOff"
 
     },
     "ChatWindow\0finish\0\0packetToSend\0Packet\0"
@@ -54,7 +54,7 @@ QT_MOC_LITERAL(15, 187, 15) // "personalInfoOff"
     "handleSendTxtMsg\0handleSendImgMsg\0"
     "showPersonalInfo\0handleBasicUserInfo\0"
     "chooseNameKind\0handleUserInfoQuery\0"
-    "url\0personalInfoOff"
+    "url\0personalInfoWindowOff"
 };
 #undef QT_MOC_LITERAL
 
@@ -120,7 +120,7 @@ void ChatWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 7: _t->handleBasicUserInfo((*reinterpret_cast< Packet(*)>(_a[1]))); break;
         case 8: _t->chooseNameKind(); break;
         case 9: _t->handleUserInfoQuery((*reinterpret_cast< QUrl(*)>(_a[1]))); break;
-        case 10: _t->personalInfoOff(); break;
+        case 10: _t->personalInfoWindowOff(); break;
         default: ;
         }
     } else if (_c == QMetaObject::IndexOfMethod) {
