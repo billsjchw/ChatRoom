@@ -45,8 +45,8 @@ private:
     bool personalInfoWindowOn;
 public:
     ChatWindow(QTcpSocket * socket, QString username):
-        socketHandler(socket), username(username), showNickname(true), personalInfoWindowOn(false),
-        path(QDir::homePath() + "/tmp/ChatRoom/" + username + "/pic_rcv/") {
+        socketHandler(socket), username(username), showNickname(true),
+        personalInfoWindowOn(false), path("/tmp/ChatRoom/" + username + "/pic_rcv/") {
         setAttribute(Qt::WA_DeleteOnClose);
         ui = new Ui::ChatWindow;
         ui->setupUi(this);
@@ -72,12 +72,12 @@ public:
     }
     ~ChatWindow() {
         delete ui;
-        QDir qDir(path);
-        QFileInfoList qFileInfoList = qDir.entryInfoList(QDir::Files);
-        for (int i = 0; i < qFileInfoList.size(); ++i) {
-            QFile imgFile(qFileInfoList[i].filePath());
-            imgFile.remove();
-        }
+        for (int i = 0; i < msgList.size(); ++i)
+            if (msgList[i].code == MSG_IMG) {
+                QString filename = msgList[i].content.take("content").toString();
+                QFile imgFile(filename);
+                imgFile.remove();
+            }
     }
 protected:
     void keyPressEvent(QKeyEvent * event) {

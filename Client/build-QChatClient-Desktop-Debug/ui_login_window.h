@@ -99,7 +99,7 @@ public:
     {
         LoginWindow->setWindowTitle(QApplication::translate("LoginWindow", "Chat Room", Q_NULLPTR));
         connect->setText(QApplication::translate("LoginWindow", "Connect", Q_NULLPTR));
-        regist->setText(QApplication::translate("LoginWindow", "Regist", Q_NULLPTR));
+        regist->setText(QApplication::translate("LoginWindow", "Register", Q_NULLPTR));
         label_2->setText(QApplication::translate("LoginWindow", "password", Q_NULLPTR));
         label->setText(QApplication::translate("LoginWindow", "username", Q_NULLPTR));
         login->setText(QApplication::translate("LoginWindow", "Login", Q_NULLPTR));
