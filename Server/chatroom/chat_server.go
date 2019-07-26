@@ -116,9 +116,9 @@ func (server *ChatServer) handleClient(client net.Conn) {
 			return
 		}
 	}
+	go writeClient(client, cliChan)
 	content, _ := json.Marshal(enterMsg(username))
 	server.broadcast <- NewPacket(MSG_SYS, content)
-	go writeClient(client, cliChan)
 	for {
 		packet, err := RcvPacket(client)
 		if err != nil {
